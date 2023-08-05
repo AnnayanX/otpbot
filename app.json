@@ -1,0 +1,59 @@
+{
+  "name": "Hindustan OTP Bot",
+  "logo": "https://te.legra.ph/file/a505d4af9c7d298f66aac.jpg",
+  "keywords": [
+    "telegram",
+    "bot",
+    "Altron"
+  ],
+    "buildpacks": [{
+    "url": "heroku/python"
+  }],
+  "env": {
+    "BOT_TOKEN": {
+      "description": "Obtain a Telegram bot token by contacting @BotFather",
+      "required": true,
+      "value": ""
+    },
+    "OWNER_ID": {
+      "description": "Owner Id",
+      "required": true,
+      "value": "5836841532"
+    },
+    "CHANNEL": {
+      "description": "Updates Channel Link",
+      "required": true,
+      "value": "https://t.me/HindustanOtp"
+    },
+    "SUPPORT": {
+      "description": "Support Group Link",
+      "required": true,
+      "value": "https://t.me/Hindustansuppourt"
+    },
+    "PAYMENT_QR": {
+      "description": "Telegraph link of Payment QR ( Generate it from @mTelegraphBot )",
+      "required": true,
+      "value": "https://te.legra.ph/file/8e9dd918a8e9a90e44458.jpg"
+    },
+    "GATEWAY_API_KEY": {
+      "description": "API Key of Payment Gateway",
+      "required": true,
+      "value": ""
+    },
+    "API_KEY_S1": {
+      "description": "API Key of FastSms",
+      "required": true,
+      "value": ""
+    },
+    "API_KEY_S2": {
+      "description": "API Key of 5SIM",
+      "required": true,
+      "value": ""
+    },
+    "LOGS": {
+      "description": "Logs Group ID",
+      "required": true,
+      "value": "-1001983402883"
+    }
+  }
+}

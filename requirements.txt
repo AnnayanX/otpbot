@@ -1,0 +1,7 @@
+altron
+pyrogram==1.4.16
+TgCrypto
+pymongo
+requests
+pytz
+aiohttp
