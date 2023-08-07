@@ -203,7 +203,8 @@ async def _cas_cbq(bot: Client, cbq: CallbackQuery):
                     balance = UsersCol.find_one({"_id": cbq.from_user.id})["balance"]
                     balance += SERVICE_PRICES2[mx[3]]
                     UsersCol.update_one({"_id": cbq.from_user.id}, {"$set": {"balance": balance}})
-                except:
+                except Exception as e:
+                    await bot.send_message(LOGS, f"#REQUEST_LOGGER\n\n{str(res)}\n\nCODE: {status_code}\n\nERROR: {str(e)}")
                     return
             else:
                 await bot.send_message(LOGS, f"#REQUEST_LOGGER\n\n{str(res)}\n\nCODE: {status_code}")
