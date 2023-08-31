@@ -81,7 +81,7 @@ async def change_balance(client: Client, message: Message):
     check_user = UsersCol.find_one({"_id": user.id})
     if check_user:
         UsersCol.update_one({"_id": user.id}, {"$set": {"balance": balance}})
-        await message.reply_text(f"✅ **Balance Updated**\n\nUser: {user.mention}\n\nPrevious Balance = `{check_user['"balance"']}`\nUpdated Balance = `{balance}₹`")
+        await message.reply_text(f"✅ **Balance Updated**\n\nUser: {user.mention}\n\nPrevious Balance = `{check_user['balance']}`\nUpdated Balance = `{balance}₹`")
     else:
         await message.reply_text("User Not Found in Database.")
 
