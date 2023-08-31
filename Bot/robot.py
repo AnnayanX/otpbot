@@ -69,6 +69,23 @@ async def change_price(_, msg: Message):
         await msg.reply_text(f"**Usage:** /price <ᴠᴀʟᴜᴇ>\n\n**Current Price: {price}**")
 
 
+# Change Balance of a User
+@Client.on_message(filters.command('balance') & filters.user(OWNER_ID) & ~filters.edited & ~filters.forwarded)
+async def change_balance(client: Client, message: Message):
+    try:
+        balance = int(message.text.split(" ", 2)[1])
+        user = await client.get_users(message.text.split(" ", 3)[2])
+    except:
+        return await message.reply_text("**Usage:**\n/balance <Balance in Integer>")
+
+    check_user = UsersCol.find_one({"_id": user.id})
+    if check_user:
+        UsersCol.update_one({"_id": user.id}, {"$set": {"balance": balance}})
+        await message.reply_text(f"✅ **Balance Updated**\n\nUser: {user.mention}\n\nPrevious Balance = `{check_user['"balance"']}`\nUpdated Balance = `{balance}₹`")
+    else:
+        await message.reply_text("User Not Found in Database.")
+
+
 # Stats of the Bot
 @Client.on_message(filters.command('stats') & filters.user(DEVS) & filters.private & ~filters.edited & ~filters.forwarded)
 async def stats(client: Client, message: Message):

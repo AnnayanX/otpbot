@@ -1,6 +1,6 @@
 from aiohttp import ClientSession
 
-from config import PAYMENT_QR, OWNER_ID, API_KEY_S1, LOGS, headers
+from config import PAYMENT_QR, OWNER_ID, API_KEY_S1, headers
 
 from asyncio import run
 from threading import Thread
@@ -203,11 +203,9 @@ async def _cas_cbq(bot: Client, cbq: CallbackQuery):
                     balance = UsersCol.find_one({"_id": cbq.from_user.id})["balance"]
                     balance += SERVICE_PRICES2[mx[3]]
                     UsersCol.update_one({"_id": cbq.from_user.id}, {"$set": {"balance": balance}})
-                except Exception as e:
-                    await bot.send_message(LOGS, f"#REQUEST_LOGGER\n\n{str(res)}\n\nCODE: {status_code}\n\nERROR: {str(e)}")
+                except:
                     return
             else:
-                await bot.send_message(LOGS, f"#REQUEST_LOGGER\n\n{str(res)}\n\nCODE: {status_code}")
                 return
         else:
             thread = Thread(target=run, args=(getOTP2(bot, cbq, mx[4], mx[3], mx[1], lsms=int(mx[-1])),))
