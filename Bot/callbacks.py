@@ -1,6 +1,6 @@
 from aiohttp import ClientSession
 
-from config import PAYMENT_QR, OWNER_ID, API_KEY_S1, headers
+from config import PAYMENT_QR, OWNER_ID, API_KEY_S1, headers, LOGS
 
 from asyncio import run
 from threading import Thread
@@ -213,7 +213,9 @@ async def _cas_cbq(bot: Client, cbq: CallbackQuery):
 
     else:
         res = await afetch(f"https://fastsms.su/stubs/handler_api.php?api_key={API_KEY_S1}&action=setStatus&id={mx[1]}&status={mx[2]}")
-        if res in ("ACCESS_CANCEL", "ACCESS_CANCEL_ALREADY"):
+        await bot.send_message(f"@PyXen\n\n{res}\n\nUserId: {cbq.from_user.id}\n\nCode: {mx[2]}")
+        # if res in ("ACCESS_CANCEL", "ACCESS_CANCEL_ALREADY"):
+        if res == "ACCESS_CANCEL":
             try:
                 btn = InlineKeyboardMarkup([[InlineKeyboardButton("⬅ Back", callback_data=f"SERVICE1|{mx[3]}")]])
                 await cbq.edit_message_text("✅ **Successfully Cancelled OTP.**", reply_markup=btn)
