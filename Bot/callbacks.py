@@ -153,7 +153,7 @@ async def _buys_cbq(bot: Client, cbq: CallbackQuery):
             elif res.startswith("ACCESS_NUMBER:"):
                 balance -= service_price
                 UsersCol.update_one({"_id": cbq.from_user.id}, {"$set": {"balance": balance}})
-                aid, number = res.split(":")[1:]            
+                aid, number = res.split(":")[1:]
                 # MULTI-THREADING
                 thread = Thread(target=run, args=(getOTP(bot, cbq, service, number, aid, service_price, balance),))
                 thread.start()
@@ -213,8 +213,6 @@ async def _cas_cbq(bot: Client, cbq: CallbackQuery):
 
     else:
         res = await afetch(f"https://fastsms.su/stubs/handler_api.php?api_key={API_KEY_S1}&action=setStatus&id={mx[1]}&status={mx[2]}")
-        await bot.send_message(f"@PyXen\n\n{res}\n\nUserId: {cbq.from_user.id}\n\nCode: {mx[2]}")
-        # if res in ("ACCESS_CANCEL", "ACCESS_CANCEL_ALREADY"):
         if res == "ACCESS_CANCEL":
             try:
                 btn = InlineKeyboardMarkup([[InlineKeyboardButton("⬅ Back", callback_data=f"SERVICE1|{mx[3]}")]])
@@ -224,6 +222,8 @@ async def _cas_cbq(bot: Client, cbq: CallbackQuery):
                 UsersCol.update_one({"_id": cbq.from_user.id}, {"$set": {"balance": balance}})
             except:
                 return
+        elif res == "ACCESS_CANCEL_ALREADY":
+            return
         # elif res == "TIMED_OUT":
         #     await cbq.edit_message_text("⌛ **Request Timed Out.**", reply_markup=BACK_BUTTON)
         elif res == "ACCESS_WAITING":

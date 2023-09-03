@@ -32,7 +32,18 @@ async def getOTP(client: Client, cbq: CallbackQuery, service, number, aid, servi
 
     text = await afetch(f"https://fastsms.su/stubs/handler_api.php?api_key={API_KEY_S1}&action=getStatus&id={aid}")
     if text == "STATUS_CANCEL":
+        LOG_TEXT = f"""❌ #OTP_CANCELLED
+
+**Service:** `{SERVICES[service]}`
+**Number:** +{number}
+**Server:** `1`
+
+**User:** {cbq.from_user.mention}
+**User-ID:** `{cbq.from_user.id}`
+**Username:** @{cbq.from_user.username}"""
+        await client.send_message(LOGS, LOG_TEXT)
         return
+    text == "STATUS_WAIT_CODE"
     while text == "STATUS_WAIT_CODE":
         await sleep(3)
         text = await afetch(f"https://fastsms.su/stubs/handler_api.php?api_key={API_KEY_S1}&action=getStatus&id={aid}")
