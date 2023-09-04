@@ -72,26 +72,23 @@ async def change_price(_, msg: Message):
 # Change Balance of a User
 @Client.on_message(filters.command('balance') & filters.user(OWNER_ID) & ~filters.edited & ~filters.forwarded)
 async def change_balance(client: Client, message: Message):
-    mx = message.text.split(" ")
+    mx = message.text.split(" ", 3)
     try:
-        user = await client.get_users(mx[1])
+        balance = int(mx[1])
+        user = await client.get_users(mx[2])
     except:
-        return await message.reply_text("**Usage:**\n\n**To Check Balance:**\n/balance <User Id>\n\n**To Set Balance:**\n/balance <User Id> <Balance in Integer>")
+        return await message.reply_text("**Usage:**\n/balance <Balance in Integer> <User Id>")
 
     check_user = UsersCol.find_one({"_id": user.id})
     if check_user:
-        try:
-            balance = int(mx[2])
-            UsersCol.update_one({"_id": user.id}, {"$set": {"balance": balance}})
-            await message.reply_text(f"✅ **Balance Updated**\n\nUser: {user.mention}\n\nPrevious Balance = `{check_user['balance']}₹`\nUpdated Balance = `{balance}₹`")
-        except:
-            await message.reply_text(f"✅ **Balance Fetched**\n\nUser: {user.mention}\nBalance = `{check_user['balance']}₹`")
+        UsersCol.update_one({"_id": user.id}, {"$set": {"balance": balance}})
+        await message.reply_text(f"✅ **Balance Updated**\n\nUser: {user.mention}\n\nPrevious Balance = `{check_user['balance']}₹`\nUpdated Balance = `{balance}₹`")
     else:
         await message.reply_text("User Not Found in Database.")
 
 
 # Check Balances Greater Than of Equal to
-@Client.on_message(filters.command('min') & filters.user(OWNER_ID) & ~filters.forwarded & ~filters.edited)
+@Client.on_message(filters.command('min') & filters.user(DEVS) & ~filters.forwarded & ~filters.edited)
 async def min_balance(_, message: Message):
     try:
         balance = int(message.text.split(" ", 2)[1])
@@ -116,7 +113,7 @@ async def min_balance(_, message: Message):
 
 
 # Fetch User
-@Client.on_message(filters.command('user') & filters.user(OWNER_ID) & ~filters.forwarded & ~filters.edited)
+@Client.on_message(filters.command('user') & filters.user(DEVS) & ~filters.forwarded & ~filters.edited)
 async def fetch_user(client: Client, message: Message):
     try:
         muser = message.text.split(" ", 2)[1]
