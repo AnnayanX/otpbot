@@ -26,7 +26,7 @@ async def payment(client: Client, message: Message):
         if response["error"]:
             await x.edit_text("❌ **No transaction found for this Transaction-Id (UTR).**", reply_markup=BAL_BUTTON)
             return
-        
+
         try:
             Transactions.insert_one({"_id": response["utr"], "user": message.chat.id, "amount": response["amount"], "time": response["time"], "via": response["payment"]})
         except:

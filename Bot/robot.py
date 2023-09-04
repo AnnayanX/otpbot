@@ -2,14 +2,14 @@ import altron
 
 from config import OWNER_ID, DEVS, FORCESUB
 
-from os import execl
+from os import execl, remove
 from sys import executable, argv
 
 from Bot.mongo import UsersCol, Orders, OthersCol
 from Bot.data import START_TEXT, START_BUTTON, TOP_SERVICES, TOP_SERVICES2, SERVICES, SERVICES2
 
 from pyrogram import Client, filters
-from pyrogram.types import Message
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 
 
 # Must Join
@@ -72,18 +72,72 @@ async def change_price(_, msg: Message):
 # Change Balance of a User
 @Client.on_message(filters.command('balance') & filters.user(OWNER_ID) & ~filters.edited & ~filters.forwarded)
 async def change_balance(client: Client, message: Message):
+    mx = message.text.split(" ")
     try:
-        balance = int(message.text.split(" ", 2)[1])
-        user = await client.get_users(message.text.split(" ", 3)[2])
+        user = await client.get_users(mx[1])
     except:
-        return await message.reply_text("**Usage:**\n/balance <Balance in Integer>")
+        return await message.reply_text("**Usage:**\n\n**To Check Balance:**\n/balance <User Id>\n\n**To Set Balance:**\n/balance <User Id> <Balance in Integer>")
 
     check_user = UsersCol.find_one({"_id": user.id})
     if check_user:
-        UsersCol.update_one({"_id": user.id}, {"$set": {"balance": balance}})
-        await message.reply_text(f"✅ **Balance Updated**\n\nUser: {user.mention}\n\nPrevious Balance = `{check_user['balance']}`\nUpdated Balance = `{balance}₹`")
+        try:
+            balance = int(mx[2])
+            UsersCol.update_one({"_id": user.id}, {"$set": {"balance": balance}})
+            await message.reply_text(f"✅ **Balance Updated**\n\nUser: {user.mention}\n\nPrevious Balance = `{check_user['balance']}₹`\nUpdated Balance = `{balance}₹`")
+        except:
+            await message.reply_text(f"✅ **Balance Fetched**\n\nUser: {user.mention}\nBalance = `{check_user['balance']}₹`")
     else:
         await message.reply_text("User Not Found in Database.")
+
+
+# Check Balances Greater Than of Equal to
+@Client.on_message(filters.command('min') & filters.user(OWNER_ID) & ~filters.forwarded & ~filters.edited)
+async def min_balance(_, message: Message):
+    try:
+        balance = int(message.text.split(" ", 2)[1])
+    except:
+        return await message.reply_text("**Usage:**\n/min <Minimum Balance>")
+
+    TEXT = "💳 BALANCE INFO:\n"
+    count = 0
+    for user in UsersCol.find({}):
+        if user['balance'] >= balance:
+            count += 1
+            TEXT += f"\n\n{count}. {user['_id']} | {user['balance']}₹"
+    
+    if count == 0:
+        await message.reply_text(f"No users found with Balance >= {balance}₹")
+    else:
+        file_path = "files/Balances.txt"
+        with open(file_path, "w") as file:
+            file.write(TEXT)
+        await message.reply_document(file_path, caption=f"Users with Balance >= {balance}₹", file_name="Balances.txt")
+        remove(file_path)
+
+
+# Fetch User
+@Client.on_message(filters.command('user') & filters.user(OWNER_ID) & ~filters.forwarded & ~filters.edited)
+async def fetch_user(client: Client, message: Message):
+    try:
+        muser = message.text.split(" ", 2)[1]
+    except:
+        return await message.reply_text("**Usage:**\n/user [UserId | Username]")
+    
+    try:
+        user = await client.get_users(muser)
+        balance = UsersCol.find_one({"_id": user.id})['balance']
+    except:
+        return await message.reply_text("Failed to Fetch User!\n\nMaybe I never met this user before.")
+    
+    TEXT = f"""✅ **USER_INFO:**
+
+**Name:** {user.mention}
+**UserId:** {user.id}
+**Username:** @{user.username}
+
+Balance = {balance}₹"""
+    button = InlineKeyboardMarkup([[InlineKeyboardButton(f"{user.first_name}", user_id=user.id)]])
+    await message.reply_text(TEXT, reply_markup=button)
 
 
 # Stats of the Bot
