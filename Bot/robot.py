@@ -75,14 +75,21 @@ async def change_balance(client: Client, message: Message):
     mx = message.text.split(" ", 3)
     try:
         balance = int(mx[1])
-        user = await client.get_users(mx[2])
+        user = await client.get_users(int(mx[2]))
+        mention = user.mention
+        user_id = user.id
+    except (ValueError, IndexError):
+        await message.reply_text("**Usage:**\n/balance [Balance in Integer] [User Id]")
+        return
     except:
-        return await message.reply_text("**Usage:**\n/balance <Balance in Integer> <User Id>")
+        mention = "Unknown User"
+        user_id = int(mx[2])
 
-    check_user = UsersCol.find_one({"_id": user.id})
+    check_user = UsersCol.find_one({"_id": user_id})
     if check_user:
-        UsersCol.update_one({"_id": user.id}, {"$set": {"balance": balance}})
-        await message.reply_text(f"✅ **Balance Updated**\n\nUser: {user.mention}\n\nPrevious Balance = `{check_user['balance']}₹`\nUpdated Balance = `{balance}₹`")
+        UsersCol.update_one({"_id": user_id}, {"$set": {"balance": balance}})
+        button = InlineKeyboardMarkup([[InlineKeyboardButton(f"{mention}", user_id=user_id)]])
+        await message.reply_text(f"✅ **Balance Updated**\n\nUser: {mention}\n\nPrevious Balance = `{check_user['balance']}₹`\nUpdated Balance = `{balance}₹`", reply_markup=button)
     else:
         await message.reply_text("User Not Found in Database.")
 
