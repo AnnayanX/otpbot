@@ -76,6 +76,7 @@ async def change_balance(client: Client, message: Message):
     try:
         balance = int(mx[1])
         user = await client.get_users(int(mx[2]))
+        name = user.first_name
         mention = user.mention
         user_id = user.id
     except (ValueError, IndexError):
@@ -83,12 +84,16 @@ async def change_balance(client: Client, message: Message):
         return
     except:
         mention = "Unknown User"
+        name = "Unknown User"
         user_id = int(mx[2])
 
     check_user = UsersCol.find_one({"_id": user_id})
     if check_user:
         UsersCol.update_one({"_id": user_id}, {"$set": {"balance": balance}})
-        button = InlineKeyboardMarkup([[InlineKeyboardButton(f"{mention}", user_id=user_id)]])
+        try:
+            button = InlineKeyboardMarkup([[InlineKeyboardButton(f"{name}", user_id=user_id)]])
+        except:
+            button = None
         await message.reply_text(f"✅ **Balance Updated**\n\nUser: {mention}\n\nPrevious Balance = `{check_user['balance']}₹`\nUpdated Balance = `{balance}₹`", reply_markup=button)
     else:
         await message.reply_text("User Not Found in Database.")
@@ -124,14 +129,14 @@ async def min_balance(_, message: Message):
 async def fetch_user(client: Client, message: Message):
     try:
         muser = message.text.split(" ", 2)[1]
-    except:
-        return await message.reply_text("**Usage:**\n/user [UserId | Username]")
-    
-    try:
         user = await client.get_users(muser)
         balance = UsersCol.find_one({"_id": user.id})['balance']
+    except IndexError:
+        await message.reply_text("**Usage:** /user [UserId|Username]")
+        return
     except:
-        return await message.reply_text("Failed to Fetch User!\n\nMaybe I never met this user before.")
+        await message.reply_text("Failed to Fetch User!\n\nMaybe I never met this user before.")
+        return
     
     TEXT = f"""✅ **USER_INFO:**
 

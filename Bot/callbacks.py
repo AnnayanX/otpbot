@@ -1,6 +1,6 @@
 from aiohttp import ClientSession
 
-from config import PAYMENT_QR, OWNER_ID, API_KEY_S1, headers, LOGS
+from config import PAYMENT_QR, OWNER_ID, API_KEY_S1, headers
 
 from asyncio import run
 from threading import Thread
@@ -11,7 +11,7 @@ from pyrogram.types import CallbackQuery
 from Bot.data import *
 from Bot.mongo import UsersCol, add_service, rm_service
 from Bot.transactions import payment_history, order_history
-from Bot.utils import services_markup, afetch, afetchcode, getOTP, getOTP2
+from Bot.utils import services_markup, afetch, getOTP, getOTP2, is_buying
 
 
 @Client.on_callback_query(filters.regex(r"mbalance|back|add_balance"))
@@ -136,6 +136,10 @@ async def _s_cbq(_, cbq: CallbackQuery):
 
 @Client.on_callback_query(filters.regex(r"BUY"))
 async def _buys_cbq(bot: Client, cbq: CallbackQuery):
+    if is_buying(cbq.from_user.id):
+        await cbq.answer("You are already Purchasing OTP...", show_alert=True)
+        return
+
     service = cbq.data.split("|", 1)[1]
     balance = UsersCol.find_one({"_id": cbq.from_user.id})["balance"]
     service_price = SERVICE_PRICES[service] if cbq.data[3] == "1" else SERVICE_PRICES2[service]
@@ -189,48 +193,13 @@ async def _cas_cbq(bot: Client, cbq: CallbackQuery):
     mx = cbq.data.split("|")
 
     if mx[0][-1] == "2":
-        if mx[2] == "8":
-            try:
-                res, status_code = await afetchcode('https://5sim.net/v1/user/cancel/' + mx[1])
-            except:
-                btn = InlineKeyboardMarkup([[InlineKeyboardButton("⬅ Back", callback_data=f"SERVICE2|{mx[3]}")]])
-                await cbq.edit_message_text("✅ **Successfully Cancelled OTP.**", reply_markup=btn)
-                return
-            if status_code == 200:
-                try:
-                    btn = InlineKeyboardMarkup([[InlineKeyboardButton("⬅ Back", callback_data=f"SERVICE2|{mx[3]}")]])
-                    await cbq.edit_message_text("✅ **Successfully Cancelled OTP.**", reply_markup=btn)
-                    balance = UsersCol.find_one({"_id": cbq.from_user.id})["balance"]
-                    balance += SERVICE_PRICES2[mx[3]]
-                    UsersCol.update_one({"_id": cbq.from_user.id}, {"$set": {"balance": balance}})
-                except:
-                    return
-            else:
-                return
-        else:
-            thread = Thread(target=run, args=(getOTP2(bot, cbq, mx[4], mx[3], mx[1], lsms=int(mx[-1])),))
-            thread.start()
-
+        thread = Thread(target=run, args=(getOTP2(bot, cbq, mx[3], mx[2], mx[1], lsms=int(mx[-1])),))
+        thread.start()
     else:
-        res = await afetch(f"https://fastsms.su/stubs/handler_api.php?api_key={API_KEY_S1}&action=setStatus&id={mx[1]}&status={mx[2]}")
-        if res == "ACCESS_CANCEL":
-            try:
-                btn = InlineKeyboardMarkup([[InlineKeyboardButton("⬅ Back", callback_data=f"SERVICE1|{mx[3]}")]])
-                await cbq.edit_message_text("✅ **Successfully Cancelled OTP.**", reply_markup=btn)
-                balance = UsersCol.find_one({"_id": cbq.from_user.id})["balance"]
-                balance += SERVICE_PRICES[mx[3]]
-                UsersCol.update_one({"_id": cbq.from_user.id}, {"$set": {"balance": balance}})
-            except:
-                return
-        elif res == "ACCESS_CANCEL_ALREADY":
-            return
-        # elif res == "TIMED_OUT":
-        #     await cbq.edit_message_text("⌛ **Request Timed Out.**", reply_markup=BACK_BUTTON)
-        elif res == "ACCESS_WAITING":
-            thread = Thread(target=run, args=(getOTP(bot, cbq, mx[4], mx[3], mx[1]),))
+        res = await afetch(f"https://fastsms.su/stubs/handler_api.php?api_key={API_KEY_S1}&action=setStatus&id={mx[1]}&status=3")
+        if res == "ACCESS_WAITING":
+            thread = Thread(target=run, args=(getOTP(bot, cbq, mx[3], mx[2], mx[1]),))
             thread.start()
-        elif len(res) < 30:
-            return
 
 
 @Client.on_callback_query(filters.regex(r"history"))
