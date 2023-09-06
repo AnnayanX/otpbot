@@ -1,6 +1,4 @@
-from aiohttp import ClientSession
-
-from config import PAYMENT_QR, OWNER_ID, API_KEY_S1, headers
+from config import PAYMENT_QR, API_KEY_S1
 
 from asyncio import run
 from threading import Thread
@@ -11,7 +9,7 @@ from pyrogram.types import CallbackQuery
 from Bot.data import *
 from Bot.mongo import UsersCol, add_service, rm_service
 from Bot.transactions import payment_history, order_history
-from Bot.utils import services_markup, afetch, getOTP, getOTP2, is_buying
+from Bot.utils import services_markup, afetch, getOTP, getOTP2
 
 
 @Client.on_callback_query(filters.regex(r"mbalance|back|add_balance"))
@@ -132,59 +130,6 @@ async def _s_cbq(_, cbq: CallbackQuery):
         await cbq.edit_message_text(text, reply_markup=buttons)
     except:
         return
-
-
-@Client.on_callback_query(filters.regex(r"BUY"))
-async def _buys_cbq(bot: Client, cbq: CallbackQuery):
-    if is_buying(cbq.from_user.id):
-        await cbq.answer("You are already Purchasing OTP...", show_alert=True)
-        return
-
-    service = cbq.data.split("|", 1)[1]
-    balance = UsersCol.find_one({"_id": cbq.from_user.id})["balance"]
-    service_price = SERVICE_PRICES[service] if cbq.data[3] == "1" else SERVICE_PRICES2[service]
-    if balance < service_price:
-        await cbq.edit_message_text(INSUFF_BALANCE, reply_markup=INSUFF_BUTTON)
-        return
-
-    if cbq.data[3] == "1":
-        res = await afetch(f"https://fastsms.su/stubs/handler_api.php?api_key={API_KEY_S1}&action=getNumber&service={service}&country=22")
-
-        try:
-            if res == "NO_BALANCE":
-                await bot.send_message(OWNER_ID, "**Please add Balance to your <u>fastsms.su</u> Account.**")
-                await cbq.edit_message_text("💤 **Bot is under Maintainance. Please wait for few minutes...**", reply_markup=BACK_BUTTON)
-            elif res.startswith("ACCESS_NUMBER:"):
-                balance -= service_price
-                UsersCol.update_one({"_id": cbq.from_user.id}, {"$set": {"balance": balance}})
-                aid, number = res.split(":")[1:]
-                # MULTI-THREADING
-                thread = Thread(target=run, args=(getOTP(bot, cbq, service, number, aid, service_price, balance),))
-                thread.start()
-            else:
-                await cbq.edit_message_text("❌ **There are no numbers with the specified parameters, please try again after few minutes...**", reply_markup=BACK_BUTTON)
-        except:
-            return
-    
-    else:
-        async with ClientSession() as session:
-            async with session.get(f'https://5sim.net/v1/user/buy/activation/india/{OPERATORS2[service]}/{service}', headers=headers) as resp:
-                res = await resp.text()
-                status_code = resp.status
-
-        if (status_code == 200) and (res != "no free phones"):
-            balance -= service_price
-            UsersCol.update_one({"_id": cbq.from_user.id}, {"$set": {"balance": balance}})
-            res = await resp.json()
-            number, aid = res["phone"], res["id"]
-            # MULTI-THREADING
-            thread = Thread(target=run, args=(getOTP2(bot, cbq, service, number, aid, service_price, balance),))
-            thread.start()
-        elif res == "not enough user balance":
-            await bot.send_message(OWNER_ID, "**Please add Balance to your <u>5sim.net</u> Account.**")
-            await cbq.edit_message_text("💤 **Bot is under Maintainance. Please wait for few minutes...**", reply_markup=BACK_BUTTON)
-        else:
-            await cbq.edit_message_text("❌ **There are no numbers with the specified parameters, please try again after few minutes...**", reply_markup=BACK_BUTTON)
 
 
 @Client.on_callback_query(filters.regex(r"CAS"))

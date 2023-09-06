@@ -69,7 +69,7 @@ SERVICE_TEXT = "🚀 **<u>Service Info</u>\n\n► Name: `{0}`\n► Key: `{1}`\n�
 
 def service_btn(service, s="1"):
     btn = InlineKeyboardMarkup([
-        [InlineKeyboardButton("💳 Get OTP", callback_data=f"BUY{s}|{service}")],
+        [InlineKeyboardButton("💳 Get OTP", url=f"https://t.me/Hindustan_Otp_bot?start={s}_{service}")],
         [InlineKeyboardButton("🌟 Add to Favourite", callback_data=f"FAVOURITE{s}|{service}")],
         [InlineKeyboardButton("🗑 Remove from Favourite", callback_data=f"REMOVEFAV{s}|{service}")],
         [InlineKeyboardButton("⬅ Back", callback_data="back")]

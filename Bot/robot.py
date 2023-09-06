@@ -1,15 +1,82 @@
 import altron
 
-from config import OWNER_ID, DEVS, FORCESUB
+from config import OWNER_ID, DEVS, FORCESUB, OWNER_ID, API_KEY_S1, headers
 
-from os import execl, remove
-from sys import executable, argv
-
+from Bot.utils import afetch, getOTP, getOTP2
 from Bot.mongo import UsersCol, Orders, OthersCol
-from Bot.data import START_TEXT, START_BUTTON, TOP_SERVICES, TOP_SERVICES2, SERVICES, SERVICES2
+from Bot.data import (
+    START_TEXT, START_BUTTON, TOP_SERVICES, TOP_SERVICES2, SERVICES, SERVICES2,
+    SERVICE_PRICES, SERVICE_PRICES2, INSUFF_BALANCE, INSUFF_BUTTON, BACK_BUTTON, OPERATORS2
+)
 
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+
+from os import execl, remove
+from threading import Thread
+from sys import executable, argv
+from aiohttp import ClientSession
+from asyncio import run, sleep, gather
+
+
+BUYERS = []
+
+
+async def add_buyer(user_id: int):
+    global BUYERS
+    BUYERS.append(user_id)
+    await sleep(5)
+    BUYERS.remove(user_id)
+
+
+async def buy_otp(client: Client, msg: Message):
+    server = msg.command[1].split("_", 1)[0]
+    service = msg.command[1].split("_", 1)[1]
+    balance = UsersCol.find_one({"_id": msg.from_user.id})["balance"]
+    service_price = SERVICE_PRICES[service] if server == "1" else SERVICE_PRICES2[service]
+    if balance < service_price:
+        await msg.reply_text(INSUFF_BALANCE, reply_markup=INSUFF_BUTTON)
+        return
+
+    if server == "1":
+        res = await afetch(f"https://fastsms.su/stubs/handler_api.php?api_key={API_KEY_S1}&action=getNumber&service={service}&country=22")
+
+        try:
+            if res == "NO_BALANCE":
+                await client.send_message(OWNER_ID, "**Please add Balance to your <u>fastsms.su</u> Account.**")
+                await msg.reply_text("💤 **Bot is under Maintainance. Please wait for few minutes...**", reply_markup=BACK_BUTTON)
+            elif res.startswith("ACCESS_NUMBER:"):
+                balance -= service_price
+                UsersCol.update_one({"_id": msg.from_user.id}, {"$set": {"balance": balance}})
+                aid, number = res.split(":")[1:]
+                # MULTI-THREADING
+                thread = Thread(target=run, args=(getOTP(client, msg, service, number, aid, service_price, balance),))
+                thread.start()
+            else:
+                await msg.reply_text("❌ **There are no numbers with the specified parameters, please try again after few minutes...**", reply_markup=BACK_BUTTON)
+        except:
+            return
+
+    else:
+        async with ClientSession() as session:
+            async with session.get(f'https://5sim.net/v1/user/buy/activation/india/{OPERATORS2[service]}/{service}', headers=headers) as resp:
+                res = await resp.text()
+                status_code = resp.status
+
+        if (status_code == 200) and (res != "no free phones"):
+            balance -= service_price
+            UsersCol.update_one({"_id": msg.from_user.id}, {"$set": {"balance": balance}})
+            res = await resp.json()
+            number, aid = res["phone"], res["id"]
+            # MULTI-THREADING
+            thread = Thread(target=run, args=(getOTP2(client, msg, service, number, aid, service_price, balance),))
+            thread.start()
+        elif res == "not enough user balance":
+            await client.send_message(OWNER_ID, "**Please add Balance to your <u>5sim.net</u> Account.**")
+            await msg.reply_text("💤 **Bot is under Maintainance. Please wait for few minutes...**", reply_markup=BACK_BUTTON)
+        else:
+            await msg.reply_text("❌ **There are no numbers with the specified parameters, please try again after few minutes...**", reply_markup=BACK_BUTTON)
+
 
 
 # Must Join
@@ -20,12 +87,18 @@ async def must_join(bot: Client, msg: Message):
 
 # Start Message
 @Client.on_message(filters.private & filters.command('start') & ~filters.edited & ~filters.forwarded)
-async def main(_, msg: Message):
-    await msg.reply_text(START_TEXT.format(msg.from_user.mention), reply_markup=START_BUTTON)
-    try:
-        UsersCol.insert_one({"_id": msg.chat.id, "balance": 0, "fav1": [], "fav2": []})
-    except:
-        pass
+async def main(client: Client, msg: Message):
+    if len(msg.command) > 1:
+        await sleep(0.5)
+        if msg.from_user.id in BUYERS:
+            return
+        gather(add_buyer(msg.from_user.id), buy_otp(client, msg))
+    else:
+        await msg.reply_text(START_TEXT.format(msg.from_user.mention), reply_markup=START_BUTTON)
+        try:
+            UsersCol.insert_one({"_id": msg.chat.id, "balance": 0, "fav1": [], "fav2": []})
+        except:
+            pass
 
 
 # Add to Top Service
