@@ -90,7 +90,7 @@ TSERVICES_TEXT = "🚀 **<u>Top Services</u>\n\nClick on Service button to get i
 
 TOP_SERVICES = dict(map(lambda x: (x, SERVICES[x]), OthersCol.find_one({"_id": "top_services1"})["services"]))
 
-NUMBER_TEXT = "🔁 **<u>GETTING OTP</u>\n\n► Service: `{0}`\n► Number: +{1}\n► Status: `STATUS_WAIT_CODE`**"
+NUMBER_TEXT = "🔁 **<u>GETTING OTP</u>\n\n► Service: `{0}`\n► Number: +{1}\n► Status: `STATUS_WAIT_CODE`**\n\n⚠ **Note:** Otp will be automatically cancelled after 5 mins."
 OTP_RECEIVED = "✅ **<u>OTP RECEIVED</u>\n\n► Service: `{0}`\n► Number: +{1}\n► OTP: `{2}`**"
 
 RUMMY_SERVICES = {'nrm': '9 Rummy', 'crm': 'Classicrummy', 'der': 'Deccan Rummy', 'gru': 'Grummy', 'mmt': 'HolyRummy', 'jor': 'Joy Rummy', 'jgr': 'JungleeRummy', 'kpr': 'KhelPay rummy', 'rrm': 'Royally Rummy', 'rbr': 'RubyRummy', 'rua': 'Rummy Apna', 'rms': 'Rummy Ares', 'rmu': 'Rummy Bloc', 'rme': 'Rummy East', 'rsj': 'Rummy Glee', 'rmg': 'Rummy Gold', 'ruk': 'Rummy Khel', 'rmr': 'Rummy Master', 'rmd': 'Rummy Modern', 'rmn': 'Rummy Nabob', 'rmb': 'Rummy Noble', 'rmo': 'Rummy Tour', 'rmw': 'Rummy Wealth', 'rux': 'Rummy XL', 'rmp': 'Rummy perfect', 'rub': 'RummyBest', 'rmc': 'RummyCircle', 'ec': 'RummyCulture', 'fl': 'RummyLoot', 'ymy': 'RummyOla', 'rmy': 'Rummyes', 'rmt': 'Rummytime', 'tar': 'TapRummy'}

@@ -39,7 +39,7 @@ async def getOTP(client: Client, cbq: CallbackQuery, service, number, aid, servi
     number = number[1:] if number[0] == "+" else number
     await cbq.edit_message_text(NUMBER_TEXT.format(SERVICES[service], number))
 
-    text == "STATUS_WAIT_CODE"
+    text = "STATUS_WAIT_CODE"
     while text == "STATUS_WAIT_CODE":
         if (user_id in OTPS.keys()) and (time() >= OTPS[user_id]):
             text = await afetch(f"https://fastsms.su/stubs/handler_api.php?api_key={API_KEY_S1}&action=setStatus&id={aid}&status=8")
@@ -66,13 +66,10 @@ async def getOTP(client: Client, cbq: CallbackQuery, service, number, aid, servi
 **User-ID:** `{user_id}`
 **Username:** @{cbq.from_user.username}"""
                 await client.send_message(LOGS, LOG_TEXT)
-            del OTPS[user_id]
+            await dlt_buying(user_id)
             return
         if text == "STATUS_CANCEL":
-            try:
-                del OTPS[user_id]
-            except:
-                pass
+            await dlt_buying(user_id)
             return
         await sleep(3)
         text = await afetch(f"https://fastsms.su/stubs/handler_api.php?api_key={API_KEY_S1}&action=getStatus&id={aid}")
@@ -111,7 +108,7 @@ async def getOTP(client: Client, cbq: CallbackQuery, service, number, aid, servi
 **Username:** @{cbq.from_user.username}"""
 
     await client.send_message(LOGS, LOG_TEXT)
-    del OTPS[user_id]
+    await dlt_buying(user_id)
 
 
 async def getOTP2(client: Client, cbq: CallbackQuery, service, number, aid, service_price=None, balance=None, lsms=0):
@@ -153,16 +150,13 @@ async def getOTP2(client: Client, cbq: CallbackQuery, service, number, aid, serv
 **User-ID:** `{cbq.from_user.id}`
 **Username:** @{cbq.from_user.username}"""
                 await client.send_message(LOGS, LOG_TEXT)
-            del OTPS[user_id]
+            await dlt_buying(user_id)
             return
         await sleep(3)
         text, status_code = await afetchcode(f'https://5sim.net/v1/user/check/{aid}')
 
         if text["status"] == "CANCELED":
-            try:
-                del OTPS[user_id]
-            except:
-                pass
+            await dlt_buying(user_id)
             return
 
         elif text["status"] in ("FINISHED", "TIMEOUT"):
@@ -171,10 +165,7 @@ async def getOTP2(client: Client, cbq: CallbackQuery, service, number, aid, serv
                 [InlineKeyboardButton("⬅ Back", callback_data=f"SERVICE2|{service}")]
             ])
             await cbq.edit_message_text("✅ ** This order is Completed.**", reply_markup=order_buttons)
-            try:
-                del OTPS[user_id]
-            except:
-                pass
+            await dlt_buying(user_id)
             return
 
         elif len(text["sms"]) == (lsms + 1):
@@ -216,11 +207,18 @@ async def getOTP2(client: Client, cbq: CallbackQuery, service, number, aid, serv
 **Username:** @{cbq.from_user.username}"""
 
     await client.send_message(LOGS, LOG_TEXT)
-    del OTPS[user_id]
+    await dlt_buying(user_id)
 
 
 def is_buying(user_id: int):
     return user_id in OTPS.keys()
+
+async def dlt_buying(user_id: int):
+    global OTPS
+    try:
+        del OTPS[user_id]
+    except:
+        pass
 
 
 def services_markup(services: dict, page_no: int, suffix: str = None, trailer=True, s="1"):
