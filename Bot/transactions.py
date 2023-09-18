@@ -10,7 +10,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message
 
 
-@Client.on_message(filters.private & filters.command('pay') & ~filters.edited & ~filters.forwarded)
+@Client.on_message(filters.private & filters.command('pay') & ~filters.forwarded)
 async def payment(client: Client, message: Message):
     try:
         UTR_ID = message.text.split(" ")[1]

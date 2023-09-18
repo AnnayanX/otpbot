@@ -5,7 +5,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message
 
 
-@Client.on_message(filters.private & filters.command(['ser', 'ser1', 'ser2']) & ~filters.forwarded & ~filters.edited)
+@Client.on_message(filters.private & filters.command(['ser', 'ser1', 'ser2']) & ~filters.forwarded)
 async def _search(_, message: Message):
     try:
         cmd, text = message.text.split(" ", 1)[:2]

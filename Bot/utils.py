@@ -1,9 +1,9 @@
 from aiohttp import ClientSession
 
-from config import API_KEY_S1, LOGS, headers
+from config import API_KEY_S1, LOGS, BOT_USERNAME, headers
 
 from Bot.mongo import Orders, UsersCol
-from Bot.data import SERVICES, SERVICES2, OTP_RECEIVED, NUMBER_TEXT, SERVICE_PRICES
+from Bot.data import SERVICES, SERVICES2, OTP_RECEIVED, NUMBER_TEXT
 
 from pyrogram import Client
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
@@ -11,13 +11,25 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from time import time
 from pytz import timezone
 from asyncio import sleep
-from threading import RLock
 from datetime import datetime
 
 
 OTPS = {}
-OTP_LOCK = RLock()
+BUYERS = []
 
+async def add_buyer(user_id):
+    global BUYERS
+    BUYERS.append(user_id)
+
+async def rm_buyer(user_id):
+    global BUYERS
+    try:
+        BUYERS.remove(user_id)
+    except:
+        pass
+
+def is_buying(user_id):
+    return user_id in BUYERS
 
 async def afetch(url):
     async with ClientSession() as session:
@@ -34,10 +46,11 @@ async def afetchcode(url):
 async def getOTP(client: Client, msg: Message, service, number, aid, service_price=None, balance=None):
     user_id = msg.from_user.id
     global OTPS
-    with OTP_LOCK:
-        OTPS[aid] = time() + 300
+    OTPS[aid] = time() + 600
+
+    buttons = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data=f"CAS|{aid}|8|{service}")]])
     number = number[1:] if number[0] == "+" else number
-    await msg.reply_text(NUMBER_TEXT.format(SERVICES[service], number))
+    mx = await msg.reply_text(NUMBER_TEXT.format(SERVICES[service], number), reply_markup=buttons)
 
     text = "STATUS_WAIT_CODE"
     while text == "STATUS_WAIT_CODE":
@@ -46,16 +59,9 @@ async def getOTP(client: Client, msg: Message, service, number, aid, service_pri
             if text == "ACCESS_CANCEL":
                 try:
                     btn = InlineKeyboardMarkup([[InlineKeyboardButton("⬅ Back", callback_data=f"SERVICE1|{service}")]])
-                    await msg.reply_text("✅ **Successfully Cancelled OTP.**", reply_markup=btn)
+                    await mx.edit_text("✅ **Successfully Cancelled OTP.**", reply_markup=btn)
                 except:
-                    try:
-                        await msg.reply_text("✅ **Successfully Cancelled OTP.**", reply_markup=btn)
-                    except:
-                        pass
-                if service_price:
-                    balance = UsersCol.find_one({"_id": user_id})["balance"]
-                    balance += service_price
-                    UsersCol.update_one({"_id": user_id}, {"$set": {"balance": balance}})
+                    pass
                 LOG_TEXT = f"""❌ #OTP_CANCELLED
 
 **Service:** `{SERVICES[service]}`
@@ -66,20 +72,51 @@ async def getOTP(client: Client, msg: Message, service, number, aid, service_pri
 **User-ID:** `{user_id}`
 **Username:** @{msg.from_user.username}"""
                 await client.send_message(LOGS, LOG_TEXT)
-            await dlt_buying(aid)
+            await dlt_buying(aid, user_id)
             return
         if text == "STATUS_CANCEL":
-            await dlt_buying(aid)
+            await dlt_buying(aid, user_id)
+            LOG_TEXT = f"""❌ #OTP_CANCELLED
+
+**Service:** `{SERVICES[service]}`
+**Number:** +{number}
+**Server:** `1`
+
+**User:** {msg.from_user.mention}
+**User-ID:** `{user_id}`
+**Username:** @{msg.from_user.username}"""
+            await client.send_message(LOGS, LOG_TEXT)
             return
         await sleep(3)
         text = await afetch(f"https://fastsms.su/stubs/handler_api.php?api_key={API_KEY_S1}&action=getStatus&id={aid}")
 
+    await dlt_buying(aid, user_id)
+    if service_price:
+        text = await afetch(f"https://fastsms.su/stubs/handler_api.php?api_key={API_KEY_S1}&action=getStatus&id={aid}")
+        if text == "STATUS_CANCEL":
+            LOG_TEXT = f"""❌ #OTP_CANCELLED
+
+**Service:** `{SERVICES[service]}`
+**Number:** +{number}
+**Server:** `1`
+
+**User:** {msg.from_user.mention}
+**User-ID:** `{user_id}`
+**Username:** @{msg.from_user.username}"""
+            await client.send_message(LOGS, LOG_TEXT)
+            return
+        balance = UsersCol.find_one({"_id": user_id})["balance"]
+        balance -= service_price
+        UsersCol.update_one({"_id": user_id}, {"$set": {"balance": balance}})
     otp_buttons = InlineKeyboardMarkup([
-        [InlineKeyboardButton("💳 New Number", url=f"https://t.me/Hindustan_Otp_bot?start=1_{service}")],
-        [InlineKeyboardButton("⏭ Next OTP", callback_data=f"CAS|{aid}|{number}|{service}")],
+        [InlineKeyboardButton("💳 New Number", url=f"https://t.me/{BOT_USERNAME}?start=1_{service}")],
+        [InlineKeyboardButton("⏭ Next OTP", callback_data=f"CAS|{aid}|3|{service}|{number}")],
         [InlineKeyboardButton("⬅ Back", callback_data=f"SERVICE1|{service}")]
     ])
-    await msg.reply_text(OTP_RECEIVED.format(SERVICES[service], number, text.split(":")[1]), reply_markup=otp_buttons)
+    try:
+        await mx.edit_text(OTP_RECEIVED.format(SERVICES[service], number, text.split(":")[1]), reply_markup=otp_buttons)
+    except:
+        await msg.reply_text(OTP_RECEIVED.format(SERVICES[service], number, text.split(":")[1]), reply_markup=otp_buttons)
 
     if service_price:
         curr_time = datetime.now(timezone("Asia/Kolkata")).strftime('%Y-%m-%d %H:%M:%S')
@@ -108,16 +145,16 @@ async def getOTP(client: Client, msg: Message, service, number, aid, service_pri
 **Username:** @{msg.from_user.username}"""
 
     await client.send_message(LOGS, LOG_TEXT)
-    await dlt_buying(aid)
 
 
 async def getOTP2(client: Client, msg: Message, service, number, aid, service_price=None, balance=None, lsms=0):
     user_id = msg.from_user.id
     global OTPS
-    with OTP_LOCK:
-        OTPS[aid] = time() + 300
+    OTPS[aid] = time() + 600
+
+    buttons = InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data=f"CAS2|{aid}|8|{service}")]])
     number = number[1:] if number[0] == "+" else number
-    await msg.reply_text(NUMBER_TEXT.format(SERVICES2[service], number))
+    mx = await msg.reply_text(NUMBER_TEXT.format(SERVICES2[service], number), reply_markup=buttons)
 
     sms = []
     while len(sms) <= lsms:
@@ -129,16 +166,9 @@ async def getOTP2(client: Client, msg: Message, service, number, aid, service_pr
             if status_code == 200:
                 try:
                     btn = InlineKeyboardMarkup([[InlineKeyboardButton("⬅ Back", callback_data=f"SERVICE2|{service}")]])
-                    await msg.reply_text("✅ **Successfully Cancelled OTP.**", reply_markup=btn)
+                    await mx.edit_text("✅ **Successfully Cancelled OTP.**", reply_markup=btn)
                 except:
-                    try:
-                        await msg.reply_text("✅ **Successfully Cancelled OTP.**", reply_markup=btn)
-                    except:
-                        pass
-                if service_price:
-                    balance = UsersCol.find_one({"_id": user_id})["balance"]
-                    balance += service_price
-                    UsersCol.update_one({"_id": user_id}, {"$set": {"balance": balance}})
+                    pass
 
                 LOG_TEXT = f"""❌ #OTP_CANCELLED
 
@@ -150,22 +180,27 @@ async def getOTP2(client: Client, msg: Message, service, number, aid, service_pr
 **User-ID:** `{msg.from_user.id}`
 **Username:** @{msg.from_user.username}"""
                 await client.send_message(LOGS, LOG_TEXT)
-            await dlt_buying(aid)
+            await dlt_buying(aid, user_id)
             return
         await sleep(3)
         text, status_code = await afetchcode(f'https://5sim.net/v1/user/check/{aid}')
 
         if text["status"] == "CANCELED":
-            await dlt_buying(aid)
+            LOG_TEXT = f"""❌ #OTP_CANCELLED
+
+**Service:** `{SERVICES2[service]}`
+**Number:** +{number}
+**Server:** `2`
+
+**User:** {msg.from_user.mention}
+**User-ID:** `{msg.from_user.id}`
+**Username:** @{msg.from_user.username}"""
+            await client.send_message(LOGS, LOG_TEXT)
+            await dlt_buying(aid, user_id)
             return
 
         elif text["status"] in ("FINISHED", "TIMEOUT"):
-            order_buttons = InlineKeyboardMarkup([
-                [InlineKeyboardButton("💳 New Number", url=f"https://t.me/Hindustan_Otp_bot?start=2_{service}")],
-                [InlineKeyboardButton("⬅ Back", callback_data=f"SERVICE2|{service}")]
-            ])
-            await msg.reply_text("✅ ** This order is Completed.**", reply_markup=order_buttons)
-            await dlt_buying(aid)
+            await dlt_buying(aid, user_id)
             return
 
         elif len(text["sms"]) == (lsms + 1):
@@ -173,12 +208,34 @@ async def getOTP2(client: Client, msg: Message, service, number, aid, service_pr
             sms = text["sms"]
             break
 
+    await dlt_buying(aid, user_id)
+    if service_price:
+        text, status_code = await afetchcode(f'https://5sim.net/v1/user/check/{aid}')
+        if text["status"] == "CANCELED":
+            LOG_TEXT = f"""❌ #OTP_CANCELLED
+
+**Service:** `{SERVICES2[service]}`
+**Number:** +{number}
+**Server:** `2`
+
+**User:** {msg.from_user.mention}
+**User-ID:** `{msg.from_user.id}`
+**Username:** @{msg.from_user.username}"""
+            await client.send_message(LOGS, LOG_TEXT)
+            return
+        balance = UsersCol.find_one({"_id": user_id})["balance"]
+        balance -= service_price
+        UsersCol.update_one({"_id": user_id}, {"$set": {"balance": balance}})
+
     otp_buttons = InlineKeyboardMarkup([
-        [InlineKeyboardButton("💳 New Number", url=f"https://t.me/Hindustan_Otp_bot?start=2_{service}")],
-        [InlineKeyboardButton("⏭ Next OTP", callback_data=f"CAS2|{aid}|{number}|{service}|{lsms}")],
+        [InlineKeyboardButton("💳 New Number", url=f"https://t.me/{BOT_USERNAME}?start=2_{service}")],
+        [InlineKeyboardButton("⏭ Next OTP", callback_data=f"CAS2|{aid}|3|{number}|{service}|{lsms}")],
         [InlineKeyboardButton("⬅ Back", callback_data=f"SERVICE2|{service}")]
     ])
-    await msg.reply_text(OTP_RECEIVED.format(SERVICES2[service], number, sms[-1]["code"]), reply_markup=otp_buttons)
+    try:
+        await mx.edit_text(OTP_RECEIVED.format(SERVICES2[service], number, sms[-1]["code"]), reply_markup=otp_buttons)
+    except:
+        await msg.reply_text(OTP_RECEIVED.format(SERVICES2[service], number, sms[-1]["code"]), reply_markup=otp_buttons)
 
     if service_price:
         curr_time = datetime.now(timezone("Asia/Kolkata")).strftime('%Y-%m-%d %H:%M:%S')
@@ -207,12 +264,15 @@ async def getOTP2(client: Client, msg: Message, service, number, aid, service_pr
 **Username:** @{msg.from_user.username}"""
 
     await client.send_message(LOGS, LOG_TEXT)
-    await dlt_buying(aid)
 
-async def dlt_buying(aid):
-    global OTPS
+async def dlt_buying(aid, user_id):
+    global OTPS, BUYERS
     try:
         del OTPS[aid]
+    except:
+        pass
+    try:
+        BUYERS.remove(user_id)
     except:
         pass
 

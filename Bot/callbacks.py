@@ -138,12 +138,29 @@ async def _cas_cbq(bot: Client, cbq: CallbackQuery):
     mx = cbq.data.split("|")
 
     if mx[0][-1] == "2":
-        thread = Thread(target=run, args=(getOTP2(bot, cbq, mx[3], mx[2], mx[1], lsms=int(mx[-1])),))
-        thread.start()
+        if mx[2] == "8":
+            try:
+                await afetch('https://5sim.net/v1/user/cancel/' + mx[1])
+            except:
+                pass
+            try:
+                btn = InlineKeyboardMarkup([[InlineKeyboardButton("⬅ Back", callback_data=f"SERVICE2|{mx[3]}")]])
+                await cbq.edit_message_text("✅ **Successfully Cancelled OTP.**", reply_markup=btn)
+            except:
+                return
+        else:
+            thread = Thread(target=run, args=(getOTP2(bot, cbq.message, mx[4], mx[3], mx[1], lsms=int(mx[-1])),))
+            thread.start()
     else:
-        res = await afetch(f"https://fastsms.su/stubs/handler_api.php?api_key={API_KEY_S1}&action=setStatus&id={mx[1]}&status=3")
-        if res == "ACCESS_WAITING":
-            thread = Thread(target=run, args=(getOTP(bot, cbq, mx[3], mx[2], mx[1]),))
+        res = await afetch(f"https://fastsms.su/stubs/handler_api.php?api_key={API_KEY_S1}&action=setStatus&id={mx[1]}&status={mx[2]}")
+        if res == "ACCESS_CANCEL":
+            try:
+                btn = InlineKeyboardMarkup([[InlineKeyboardButton("⬅ Back", callback_data=f"SERVICE1|{mx[3]}")]])
+                await cbq.edit_message_text("✅ **Successfully Cancelled OTP.**", reply_markup=btn)
+            except:
+                return
+        elif res == "ACCESS_WAITING":
+            thread = Thread(target=run, args=(getOTP(bot, cbq.message, mx[3], mx[4], mx[1]),))
             thread.start()
 
 

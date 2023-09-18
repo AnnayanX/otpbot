@@ -1,7 +1,7 @@
 import requests
 
 from Bot.mongo import OthersCol
-from config import CHANNEL, SUPPORT, API_KEY_S1
+from config import CHANNEL, SUPPORT, API_KEY_S1, BOT_USERNAME
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
@@ -10,6 +10,10 @@ try:
 except:
     OthersCol.insert_one({"_id": "price", "price": 1.5})
     OTP_PRICE = 1.5
+
+JOIN_MESSAGE = """**Please Join My Updates Channel to use this Bot!**
+
+Due to Telegram Users Traffic, Only Channel Subscribers can use the Bot!"""
 
 START_TEXT = """**Hey, {0} !
 
@@ -69,7 +73,7 @@ SERVICE_TEXT = "🚀 **<u>Service Info</u>\n\n► Name: `{0}`\n► Key: `{1}`\n�
 
 def service_btn(service, s="1"):
     btn = InlineKeyboardMarkup([
-        [InlineKeyboardButton("💳 Get OTP", url=f"https://t.me/Hindustan_Otp_bot?start={s}_{service}")],
+        [InlineKeyboardButton("💳 Get OTP", url=f"https://t.me/{BOT_USERNAME}?start={s}_{service}")],
         [InlineKeyboardButton("🌟 Add to Favourite", callback_data=f"FAVOURITE{s}|{service}")],
         [InlineKeyboardButton("🗑 Remove from Favourite", callback_data=f"REMOVEFAV{s}|{service}")],
         [InlineKeyboardButton("⬅ Back", callback_data="back")]
@@ -90,7 +94,7 @@ TSERVICES_TEXT = "🚀 **<u>Top Services</u>\n\nClick on Service button to get i
 
 TOP_SERVICES = dict(map(lambda x: (x, SERVICES[x]), OthersCol.find_one({"_id": "top_services1"})["services"]))
 
-NUMBER_TEXT = "🔁 **<u>GETTING OTP</u>\n\n► Service: `{0}`\n► Number: +{1}\n► Status: `STATUS_WAIT_CODE`**\n\n⚠ **Note:** Otp will be automatically cancelled after 5 mins."
+NUMBER_TEXT = "🔁 **<u>GETTING OTP</u>\n\n► Service: `{0}`\n► Number: +{1}\n► Status: `STATUS_WAIT_CODE`**"
 OTP_RECEIVED = "✅ **<u>OTP RECEIVED</u>\n\n► Service: `{0}`\n► Number: +{1}\n► OTP: `{2}`**"
 
 RUMMY_SERVICES = {'nrm': '9 Rummy', 'crm': 'Classicrummy', 'der': 'Deccan Rummy', 'gru': 'Grummy', 'mmt': 'HolyRummy', 'jor': 'Joy Rummy', 'jgr': 'JungleeRummy', 'kpr': 'KhelPay rummy', 'rrm': 'Royally Rummy', 'rbr': 'RubyRummy', 'rua': 'Rummy Apna', 'rms': 'Rummy Ares', 'rmu': 'Rummy Bloc', 'rme': 'Rummy East', 'rsj': 'Rummy Glee', 'rmg': 'Rummy Gold', 'ruk': 'Rummy Khel', 'rmr': 'Rummy Master', 'rmd': 'Rummy Modern', 'rmn': 'Rummy Nabob', 'rmb': 'Rummy Noble', 'rmo': 'Rummy Tour', 'rmw': 'Rummy Wealth', 'rux': 'Rummy XL', 'rmp': 'Rummy perfect', 'rub': 'RummyBest', 'rmc': 'RummyCircle', 'ec': 'RummyCulture', 'fl': 'RummyLoot', 'ymy': 'RummyOla', 'rmy': 'Rummyes', 'rmt': 'Rummytime', 'tar': 'TapRummy'}

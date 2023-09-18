@@ -1,32 +1,21 @@
-import altron
-
 from config import OWNER_ID, DEVS, FORCESUB, OWNER_ID, API_KEY_S1, headers
 
-from Bot.utils import afetch, getOTP, getOTP2
 from Bot.mongo import UsersCol, Orders, OthersCol
+from Bot.utils import afetch, getOTP, getOTP2, is_buying, add_buyer, rm_buyer
 from Bot.data import (
-    START_TEXT, START_BUTTON, TOP_SERVICES, TOP_SERVICES2, SERVICES, SERVICES2,
+    START_TEXT, START_BUTTON, TOP_SERVICES, TOP_SERVICES2, SERVICES, SERVICES2, JOIN_MESSAGE,
     SERVICE_PRICES, SERVICE_PRICES2, INSUFF_BALANCE, INSUFF_BUTTON, BACK_BUTTON, OPERATORS2
 )
 
 from pyrogram import Client, filters
+from pyrogram.errors import FloodWait, ChatAdminRequired, UserNotParticipant
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 
 from os import execl, remove
 from threading import Thread
+from asyncio import run, sleep
 from sys import executable, argv
 from aiohttp import ClientSession
-from asyncio import run, sleep, gather
-
-
-BUYERS = []
-
-
-async def add_buyer(user_id: int):
-    global BUYERS
-    BUYERS.append(user_id)
-    await sleep(5)
-    BUYERS.remove(user_id)
 
 
 async def buy_otp(client: Client, msg: Message):
@@ -35,6 +24,7 @@ async def buy_otp(client: Client, msg: Message):
     balance = UsersCol.find_one({"_id": msg.from_user.id})["balance"]
     service_price = SERVICE_PRICES[service] if server == "1" else SERVICE_PRICES2[service]
     if balance < service_price:
+        await rm_buyer(msg.from_user.id)
         await msg.reply_text(INSUFF_BALANCE, reply_markup=INSUFF_BUTTON)
         return
 
@@ -43,18 +33,19 @@ async def buy_otp(client: Client, msg: Message):
 
         try:
             if res == "NO_BALANCE":
+                await rm_buyer(msg.from_user.id)
                 await client.send_message(OWNER_ID, "**Please add Balance to your <u>fastsms.su</u> Account.**")
                 await msg.reply_text("💤 **Bot is under Maintainance. Please wait for few minutes...**", reply_markup=BACK_BUTTON)
             elif res.startswith("ACCESS_NUMBER:"):
-                balance -= service_price
-                UsersCol.update_one({"_id": msg.from_user.id}, {"$set": {"balance": balance}})
                 aid, number = res.split(":")[1:]
                 # MULTI-THREADING
                 thread = Thread(target=run, args=(getOTP(client, msg, service, number, aid, service_price, balance),))
                 thread.start()
             else:
+                await rm_buyer(msg.from_user.id)
                 await msg.reply_text("❌ **There are no numbers with the specified parameters, please try again after few minutes...**", reply_markup=BACK_BUTTON)
         except:
+            await rm_buyer(msg.from_user.id)
             return
 
     else:
@@ -64,35 +55,48 @@ async def buy_otp(client: Client, msg: Message):
                 status_code = resp.status
 
         if (status_code == 200) and (res != "no free phones"):
-            balance -= service_price
-            UsersCol.update_one({"_id": msg.from_user.id}, {"$set": {"balance": balance}})
             res = await resp.json()
             number, aid = res["phone"], res["id"]
             # MULTI-THREADING
             thread = Thread(target=run, args=(getOTP2(client, msg, service, number, aid, service_price, balance),))
             thread.start()
         elif res == "not enough user balance":
+            await rm_buyer(msg.from_user.id)
             await client.send_message(OWNER_ID, "**Please add Balance to your <u>5sim.net</u> Account.**")
             await msg.reply_text("💤 **Bot is under Maintainance. Please wait for few minutes...**", reply_markup=BACK_BUTTON)
         else:
+            await rm_buyer(msg.from_user.id)
             await msg.reply_text("❌ **There are no numbers with the specified parameters, please try again after few minutes...**", reply_markup=BACK_BUTTON)
 
 
 
 # Must Join
-@Client.on_message(filters.private & filters.incoming & ~filters.edited & ~filters.forwarded, group=-1)
-async def must_join(bot: Client, msg: Message):
-    await altron.must_join(bot, msg, FORCESUB)
+@Client.on_message(filters.private & filters.incoming & ~filters.forwarded, group=-1)
+async def must_join(client: Client, message: Message):
+    try:
+        await client.get_chat_member(FORCESUB, message.from_user.id)
+    except UserNotParticipant:
+        await message.reply_text(
+            JOIN_MESSAGE,
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("✘ ᴊᴏɪɴ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ", url=f"https://t.me/{FORCESUB}")]
+            ]),
+        )
+        await message.stop_propagation()
+    except ChatAdminRequired:
+        print(f"I'm not admin in the MUST_JOIN chat : @{FORCESUB} !")
 
 
 # Start Message
-@Client.on_message(filters.private & filters.command('start') & ~filters.edited & ~filters.forwarded)
+@Client.on_message(filters.private & filters.command('start') & ~filters.forwarded)
 async def main(client: Client, msg: Message):
     if len(msg.command) > 1:
         await sleep(0.5)
-        if msg.from_user.id in BUYERS:
+        if is_buying(msg.from_user.id):
+            await msg.reply_text("⚠ **Please Cancel Your First Order To Receive New Number.**")
             return
-        gather(add_buyer(msg.from_user.id), buy_otp(client, msg))
+        await add_buyer(msg.from_user.id)
+        await buy_otp(client, msg)
     else:
         await msg.reply_text(START_TEXT.format(msg.from_user.mention), reply_markup=START_BUTTON)
         try:
@@ -102,7 +106,7 @@ async def main(client: Client, msg: Message):
 
 
 # Add to Top Service
-@Client.on_message(filters.command(['top', 'top1', 'top2']) & filters.user(OWNER_ID) & ~filters.edited & ~filters.forwarded)
+@Client.on_message(filters.command(['top', 'top1', 'top2']) & filters.user(OWNER_ID) & ~filters.forwarded)
 async def top_service(_, msg: Message):
     try:
         cmd, key = msg.text.split(" ")[:2]
@@ -130,7 +134,7 @@ async def top_service(_, msg: Message):
 
 
 # Change Price
-@Client.on_message(filters.command('price') & filters.user(OWNER_ID) & ~filters.edited & ~filters.forwarded)
+@Client.on_message(filters.command('price') & filters.user(OWNER_ID) & ~filters.forwarded)
 async def change_price(_, msg: Message):
     try:
         price = float(msg.text.split(" ")[1])
@@ -143,7 +147,7 @@ async def change_price(_, msg: Message):
 
 
 # Change Balance of a User
-@Client.on_message(filters.command('balance') & filters.user(OWNER_ID) & ~filters.edited & ~filters.forwarded)
+@Client.on_message(filters.command('balance') & filters.user(OWNER_ID) & ~filters.forwarded)
 async def change_balance(client: Client, message: Message):
     mx = message.text.split(" ", 3)
     try:
@@ -173,7 +177,7 @@ async def change_balance(client: Client, message: Message):
 
 
 # Check Balances Greater Than of Equal to
-@Client.on_message(filters.command('min') & filters.user(DEVS) & ~filters.forwarded & ~filters.edited)
+@Client.on_message(filters.command('min') & filters.user(DEVS) & ~filters.forwarded)
 async def min_balance(_, message: Message):
     try:
         balance = int(message.text.split(" ", 2)[1])
@@ -198,7 +202,7 @@ async def min_balance(_, message: Message):
 
 
 # Fetch User
-@Client.on_message(filters.command('user') & filters.user(DEVS) & ~filters.forwarded & ~filters.edited)
+@Client.on_message(filters.command('user') & filters.user(DEVS) & ~filters.forwarded)
 async def fetch_user(client: Client, message: Message):
     try:
         muser = message.text.split(" ", 2)[1]
@@ -223,7 +227,7 @@ Balance = {balance}₹"""
 
 
 # Stats of the Bot
-@Client.on_message(filters.command('stats') & filters.user(DEVS) & filters.private & ~filters.edited & ~filters.forwarded)
+@Client.on_message(filters.command('stats') & filters.user(DEVS) & filters.private & ~filters.forwarded)
 async def stats(client: Client, message: Message):
     num_users = UsersCol.count_documents({})
     num_o = Orders.count_documents({})
@@ -231,12 +235,39 @@ async def stats(client: Client, message: Message):
 ㅤㅤㅤ   ≛≛ **ᴛᴏᴛᴀʟ ᴜꜱᴇʀꜱ :** {num_users}
 ㅤㅤㅤ   ≛≛ **ᴛᴏᴛᴀʟ ᴏʀᴅᴇʀs :** {num_o}
 ㅤㅤ ▬▬▬**「ꜱᴛᴀᴛɪꜱᴛɪᴄꜱ」**▬▬▬"""
-    await altron.stats(client, message, stats_text)
+    await message.reply_photo("https://te.legra.ph/file/04e8f8e6bbf74c54f3f9d.jpg", caption=stats_text)
 
 
 # Global Cast
-@Client.on_message(filters.user(OWNER_ID) & filters.command('gcast') & ~filters.edited & ~filters.forwarded)
+@Client.on_message(filters.user(OWNER_ID) & filters.command('gcast') & ~filters.forwarded)
 async def gcast(client: Client, message: Message):
     all_users = UsersCol.find({}, {"_id":1})
     user_ids = [user_id["_id"] for user_id in all_users]
-    await altron.gcast(client, message, user_ids)
+    if message.reply_to_message:
+        m = message.reply_to_message_id
+        p = message.chat.id
+    else:
+        query = message.text.split(" ", 1)
+        if len(query) == 1:
+            await message.reply_text(f"𝗨𝘀𝗮𝗴𝗲:\n » /gcast [MESSAGE] ᴏʀ [Reply to a Message]")
+            return
+        gcast_msg = query[1]
+
+    alt = 0
+    for uid in user_ids:
+        try:
+            if message.reply_to_message:
+                await client.forward_messages(uid, p, m)
+            else:
+                await client.send_message(uid, text=gcast_msg)
+            alt += 1
+            await sleep(0.3)
+        except FloodWait as e:
+            flood_time = int(e.value)
+            await sleep(flood_time)
+        except Exception:
+            pass
+    try:
+        await message.reply_text(f"**» ʙʀᴏᴀᴅᴄᴀꜱᴛᴇᴅ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ {alt} ᴄʜᴀᴛꜱ.**")
+    except:
+        pass
