@@ -149,18 +149,18 @@ async def _cas_cbq(bot: Client, cbq: CallbackQuery):
             except:
                 return
         else:
-            thread = Thread(target=run, args=(getOTP2(bot, cbq.message, mx[4], mx[3], mx[1], lsms=int(mx[-1])),))
+            thread = Thread(target=run, args=(getOTP2(bot, cbq.message, cbq.from_user, mx[4], mx[3], mx[1], lsms=int(mx[-1])),))
             thread.start()
     else:
         res = await afetch(f"https://fastsms.su/stubs/handler_api.php?api_key={API_KEY_S1}&action=setStatus&id={mx[1]}&status={mx[2]}")
-        if res == "ACCESS_CANCEL":
+        if res in ("ACCESS_CANCEL", "ACCESS_CANCEL_ALREADY"):
             try:
                 btn = InlineKeyboardMarkup([[InlineKeyboardButton("⬅ Back", callback_data=f"SERVICE1|{mx[3]}")]])
                 await cbq.edit_message_text("✅ **Successfully Cancelled OTP.**", reply_markup=btn)
             except:
                 return
         elif res == "ACCESS_WAITING":
-            thread = Thread(target=run, args=(getOTP(bot, cbq.message, mx[3], mx[4], mx[1]),))
+            thread = Thread(target=run, args=(getOTP(bot, cbq.message, cbq.from_user, mx[3], mx[4], mx[1]),))
             thread.start()
 
 

@@ -6,7 +6,7 @@ from Bot.mongo import Orders, UsersCol
 from Bot.data import SERVICES, SERVICES2, OTP_RECEIVED, NUMBER_TEXT
 
 from pyrogram import Client
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.types import Message, User, InlineKeyboardMarkup, InlineKeyboardButton
 
 from time import time
 from pytz import timezone
@@ -43,8 +43,8 @@ async def afetchcode(url):
             return await resp.json(), resp.status
 
 
-async def getOTP(client: Client, msg: Message, service, number, aid, service_price=None, balance=None):
-    user_id = msg.from_user.id
+async def getOTP(client: Client, msg: Message, user: User, service, number, aid, service_price=None, balance=None):
+    user_id = user.id
     global OTPS
     OTPS[aid] = time() + 600
 
@@ -68,9 +68,9 @@ async def getOTP(client: Client, msg: Message, service, number, aid, service_pri
 **Number:** +{number}
 **Server:** `1`
 
-**User:** {msg.from_user.mention}
+**User:** {user.mention}
 **User-ID:** `{user_id}`
-**Username:** @{msg.from_user.username}"""
+**Username:** @{user.username}"""
                 await client.send_message(LOGS, LOG_TEXT)
             await dlt_buying(aid, user_id)
             return
@@ -82,9 +82,9 @@ async def getOTP(client: Client, msg: Message, service, number, aid, service_pri
 **Number:** +{number}
 **Server:** `1`
 
-**User:** {msg.from_user.mention}
+**User:** {user.mention}
 **User-ID:** `{user_id}`
-**Username:** @{msg.from_user.username}"""
+**Username:** @{user.username}"""
             await client.send_message(LOGS, LOG_TEXT)
             return
         await sleep(3)
@@ -100,9 +100,9 @@ async def getOTP(client: Client, msg: Message, service, number, aid, service_pri
 **Number:** +{number}
 **Server:** `1`
 
-**User:** {msg.from_user.mention}
+**User:** {user.mention}
 **User-ID:** `{user_id}`
-**Username:** @{msg.from_user.username}"""
+**Username:** @{user.username}"""
             await client.send_message(LOGS, LOG_TEXT)
             return
         balance = UsersCol.find_one({"_id": user_id})["balance"]
@@ -129,9 +129,9 @@ async def getOTP(client: Client, msg: Message, service, number, aid, service_pri
 **Number:** +{number}
 **Server:** `1`
 
-**User:** {msg.from_user.mention}
+**User:** {user.mention}
 **User-ID:** `{user_id}`
-**Username:** @{msg.from_user.username}"""
+**Username:** @{user.username}"""
     
     else:
         LOG_TEXT = f"""🔁 #NEW_OTP
@@ -140,15 +140,15 @@ async def getOTP(client: Client, msg: Message, service, number, aid, service_pri
 **Number:** +{number}
 **Server:** `1`
 
-**User:** {msg.from_user.mention}
+**User:** {user.mention}
 **User-ID:** `{user_id}`
-**Username:** @{msg.from_user.username}"""
+**Username:** @{user.username}"""
 
     await client.send_message(LOGS, LOG_TEXT)
 
 
-async def getOTP2(client: Client, msg: Message, service, number, aid, service_price=None, balance=None, lsms=0):
-    user_id = msg.from_user.id
+async def getOTP2(client: Client, msg: Message, user: User, service, number, aid, service_price=None, balance=None, lsms=0):
+    user_id = user.id
     global OTPS
     OTPS[aid] = time() + 600
 
@@ -176,9 +176,9 @@ async def getOTP2(client: Client, msg: Message, service, number, aid, service_pr
 **Number:** +{number}
 **Server:** `2`
 
-**User:** {msg.from_user.mention}
-**User-ID:** `{msg.from_user.id}`
-**Username:** @{msg.from_user.username}"""
+**User:** {user.mention}
+**User-ID:** `{user_id}`
+**Username:** @{user.username}"""
                 await client.send_message(LOGS, LOG_TEXT)
             await dlt_buying(aid, user_id)
             return
@@ -192,9 +192,9 @@ async def getOTP2(client: Client, msg: Message, service, number, aid, service_pr
 **Number:** +{number}
 **Server:** `2`
 
-**User:** {msg.from_user.mention}
-**User-ID:** `{msg.from_user.id}`
-**Username:** @{msg.from_user.username}"""
+**User:** {user.mention}
+**User-ID:** `{user_id}`
+**Username:** @{user.username}"""
             await client.send_message(LOGS, LOG_TEXT)
             await dlt_buying(aid, user_id)
             return
@@ -218,9 +218,9 @@ async def getOTP2(client: Client, msg: Message, service, number, aid, service_pr
 **Number:** +{number}
 **Server:** `2`
 
-**User:** {msg.from_user.mention}
-**User-ID:** `{msg.from_user.id}`
-**Username:** @{msg.from_user.username}"""
+**User:** {user.mention}
+**User-ID:** `{user_id}`
+**Username:** @{user.username}"""
             await client.send_message(LOGS, LOG_TEXT)
             return
         balance = UsersCol.find_one({"_id": user_id})["balance"]
@@ -248,9 +248,9 @@ async def getOTP2(client: Client, msg: Message, service, number, aid, service_pr
 **Number:** +{number}
 **Server:** `2`
 
-**User:** {msg.from_user.mention}
-**User-ID:** `{msg.from_user.id}`
-**Username:** @{msg.from_user.username}"""
+**User:** {user.mention}
+**User-ID:** `{user_id}`
+**Username:** @{user.username}"""
     
     else:
         LOG_TEXT = f"""🔁 #NEW_OTP
@@ -259,9 +259,9 @@ async def getOTP2(client: Client, msg: Message, service, number, aid, service_pr
 **Number:** +{number}
 **Server:** `2`
 
-**User:** {msg.from_user.mention}
-**User-ID:** `{msg.from_user.id}`
-**Username:** @{msg.from_user.username}"""
+**User:** {user.mention}
+**User-ID:** `{user_id}`
+**Username:** @{user.username}"""
 
     await client.send_message(LOGS, LOG_TEXT)
 

@@ -39,7 +39,7 @@ async def buy_otp(client: Client, msg: Message):
             elif res.startswith("ACCESS_NUMBER:"):
                 aid, number = res.split(":")[1:]
                 # MULTI-THREADING
-                thread = Thread(target=run, args=(getOTP(client, msg, service, number, aid, service_price, balance),))
+                thread = Thread(target=run, args=(getOTP(client, msg, msg.from_user, service, number, aid, service_price, balance),))
                 thread.start()
             else:
                 await rm_buyer(msg.from_user.id)
@@ -58,7 +58,7 @@ async def buy_otp(client: Client, msg: Message):
             res = await resp.json()
             number, aid = res["phone"], res["id"]
             # MULTI-THREADING
-            thread = Thread(target=run, args=(getOTP2(client, msg, service, number, aid, service_price, balance),))
+            thread = Thread(target=run, args=(getOTP2(client, msg, msg.from_user, service, number, aid, service_price, balance),))
             thread.start()
         elif res == "not enough user balance":
             await rm_buyer(msg.from_user.id)
