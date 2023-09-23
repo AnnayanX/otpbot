@@ -25,7 +25,7 @@ else:
     GATEWAY_API_KEY = "78cd31d209ff4f08890fce59dd9c849c"
     OWNER_ID = 5836841532
     CHANNEL = "https://t.me/HindustanOtp"
-    SUPPORT = "https://t.me/Hindustansuppourt"
+    SUPPORT = "https://t.me/Hindustan_Support"
     PAYMENT_QR = "https://te.legra.ph/file/8e9dd918a8e9a90e44458.jpg"
     LOGS = -1001983402883
 
