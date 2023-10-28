@@ -29,7 +29,7 @@ else:
     PAYMENT_QR = "https://te.legra.ph/file/8e9dd918a8e9a90e44458.jpg"
     LOGS = -1001983402883
 
-DEVS = [5518687442]
+DEVS = [5991613885]
 DEVS.append(OWNER_ID)
 FORCESUB = CHANNEL.split("/")[-1]
 
