@@ -92,6 +92,11 @@ FSERVICES_TEXT = "🚀 **<u>Favourite Services</u>\n\nClick on Service button to
 
 TSERVICES_TEXT = "🚀 **<u>Top Services</u>\n\nClick on Service button to get it's <u>OTP</u>.**"
 
+try:
+    ts = OthersCol.find_one({"_id": "top_services1"})["services"]
+except:
+    OthersCol.insert_one({"_id": "top_services1", "services": []})
+    ts = []
 TOP_SERVICES = dict(map(lambda x: (x, SERVICES[x]), ts))
 
 NUMBER_TEXT = "🔁 **<u>GETTING OTP</u>\n\n► Service: `{0}`\n► Number: +{1}\n► Status: `STATUS_WAIT_CODE`**"
