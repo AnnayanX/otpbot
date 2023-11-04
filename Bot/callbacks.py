@@ -35,7 +35,7 @@ async def _np_callback(_, cbq: CallbackQuery):
     
     elif cbq.data[4] == "M":
         user = UsersCol.find_one({"_id": cbq.from_user.id})
-        services = dict(map(lambda x: (x, SERVICE[x]), user["fav1"]))
+        services = dict(map(lambda x: (x, SERVICES[x]), user["fav1"]))
         buttons = services_markup(services, page_no, "M")
     
     elif cbq.data[4] == "Z":
@@ -44,7 +44,7 @@ async def _np_callback(_, cbq: CallbackQuery):
         buttons = services_markup(services, page_no, "Z", s="2")
     
     elif cbq.data[4] == "T":
-        buttons = services_markup(TOP_SERVICE, page_no, "T")
+        buttons = services_markup(TOP_SERVICES, page_no, "T")
 
     elif cbq.data[4] == "R":
         buttons = services_markup(RUMMY_SERVICES, page_no, "R")
@@ -67,7 +67,7 @@ async def _service_cbq(_, cbq: CallbackQuery):
     buttons = service_btn(service, cbq.data[7])
     try:
         if cbq.data.startswith("SERVICE1"):
-            await cbq.edit_message_text(SERVICE_TEXT.format(SERVICE[service], service, SERVICE_PRICES[service]), reply_markup=buttons)
+            await cbq.edit_message_text(SERVICE_TEXT.format(SERVICES[service], service, SERVICE_PRICES[service]), reply_markup=buttons)
         else:
             await cbq.edit_message_text(SERVICE_TEXT.format(SERVICES2[service], service, SERVICE_PRICES2[service]), reply_markup=buttons)
     except:
