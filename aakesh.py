@@ -8,7 +8,7 @@ if not path.exists("files/"):
     mkdir("files/")
 
 app = Client(
-    "HindustanOtpBot",
+    "AakeshOTPBot",
     api_id=API_ID,
     api_hash=API_HASH,
     bot_token=BOT_TOKEN,
@@ -18,7 +18,7 @@ app = Client(
 # Run Bot
 if __name__ == "__main__":
     app.start()
-    print("Altron Started Successfully!")
+    print("Aakesh Started Successfully!")
     idle()
     app.stop()
     print("Bot Stopped!")
